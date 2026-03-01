@@ -1,0 +1,50 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.0.3'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.ben'
+version = '0.0.1-SNAPSHOT'
+description = 'Sends email/SMS notifications'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'io.projectreactor.kafka:reactor-kafka:1.3.24'
+    implementation 'org.apache.kafka:kafka-clients:3.4.0'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // For JSON processing (JavaTimeModule)
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    // Optional: if we want to persist notifications (add R2DBC if needed)
+    // implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
+    // implementation 'org.postgresql:r2dbc-postgresql:1.0.2.RELEASE'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+configurations.all {
+    resolutionStrategy {
+        force 'org.apache.kafka:kafka-clients:3.4.0'
+    }
+}
+

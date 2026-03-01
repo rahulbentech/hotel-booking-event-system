@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: payment-service
+  r2dbc:
+    url: ${DB_URL:r2dbc:postgresql://localhost:5433/paymentdb}
+    username: ${DB_USER:payment_user}
+    password: ${DB_PASSWORD:payment_pass}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+server:
+  port: ${PORT:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.ben.payment: DEBUG

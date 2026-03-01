@@ -1,0 +1,55 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.3'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.ben'
+version = '0.0.1-SNAPSHOT'
+description = 'Accepts booking requests, publishes to Kafka'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot WebFlux (reactive web)
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Reactive database access with R2DBC
+    implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
+    implementation 'org.postgresql:r2dbc-postgresql:1.0.2.RELEASE'
+
+    // Reactive Kafka integration
+    implementation 'io.projectreactor.kafka:reactor-kafka:1.3.24'
+    implementation 'org.apache.kafka:kafka-clients:3.4.0'
+
+    // Validation and Actuator
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    // Lombok (optional, reduces boilerplate)
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+configurations.all {
+    resolutionStrategy {
+        force 'org.apache.kafka:kafka-clients:3.4.0'
+    }
+}
