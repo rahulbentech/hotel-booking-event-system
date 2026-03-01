@@ -11,8 +11,6 @@ Real‑time hotel booking system built with **Spring Boot 3**, **Apache Kafka**,
 
 ## Architecture
 
-![Architecture Diagram](docs/architecture.png) <!-- replace with actual image or use Mermaid -->
-
 ```mermaid
 graph LR
     Client -->|POST /api/bookings| booking-service
@@ -26,105 +24,97 @@ graph LR
     booking-service -->|consume PaymentProcessed| Kafka
     notification-service -->|consume BookingCreated & PaymentProcessed| Kafka
     notification-service -->|send notifications| Email/SMS
+```
 
+**Kafka Topics**
+- `booking-events` – published by `booking-service`, consumed by `payment-service` and `notification-service`
+- `payment-events` – published by `payment-service`, consumed by `booking-service` and `notification-service`
 
-    Kafka Topics
+**Consumer Groups**
+- `payment-group` – for payment‑service
+- `booking-group` – for booking‑service
+- `notification-group` – for notification‑service
 
-booking-events – published by booking-service, consumed by payment-service and notification-service
+---
 
-payment-events – published by payment-service, consumed by booking-service and notification-service
+## Tech Stack
 
-Consumer Groups
+| Component            | Technology                         |
+|----------------------|------------------------------------|
+| Language             | Java 21                            |
+| Framework            | Spring Boot 3 (WebFlux)            |
+| Database             | PostgreSQL 15 + R2DBC              |
+| Messaging            | Apache Kafka 7.5 + Reactor Kafka   |
+| Containerisation     | Docker + Docker Compose             |
+| Monitoring           | Spring Boot Actuator, Prometheus   |
 
-payment-group – for payment‑service
+---
 
-booking-group – for booking‑service
+## Microservices
 
-notification-group – for notification‑service
+### 1. Booking Service
+- **Port:** `8080`
+- **Database:** `bookingdb`
+- **Responsibilities:**
+  - Accept booking requests (`POST /api/bookings`)
+  - Persist booking with `PENDING` status
+  - Publish `BookingCreated` event
+  - Update booking status after consuming `PaymentProcessed`
 
-Tech Stack
-Component	Technology
-Language	Java 21
-Framework	Spring Boot 3 (WebFlux)
-Database	PostgreSQL 15 + R2DBC
-Messaging	Apache Kafka 7.5 + Reactor Kafka
-Containerisation	Docker + Docker Compose
-Monitoring	Spring Boot Actuator, Prometheus
-Microservices
-1. Booking Service
-Port: 8080
+### 2. Payment Service
+- **Port:** `8081`
+- **Database:** `paymentdb`
+- **Responsibilities:**
+  - Consume `BookingCreated` events
+  - Simulate payment processing (random success/failure)
+  - Persist payment attempt
+  - Publish `PaymentProcessed` event
 
-Database: bookingdb
+### 3. Notification Service
+- **Port:** `8082`
+- **Database:** none (optional logging)
+- **Responsibilities:**
+  - Consume both `BookingCreated` and `PaymentProcessed` events
+  - Simulate sending email/SMS (logged to console)
 
-Responsibilities:
+---
 
-Accept booking requests (POST /api/bookings)
+## Getting Started
 
-Persist booking with PENDING status
+### Prerequisites
+- Docker & Docker Compose ([install](https://docs.docker.com/compose/install/))
+- Git (optional)
 
-Publish BookingCreated event
+### Run the System
 
-Update booking status after consuming PaymentProcessed
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/rahulbentech/hotel-booking-event-system.git
+   cd hotel-booking-event-system
+   ```
 
-2. Payment Service
-Port: 8081
+2. Start all services:
+   ```bash
+   docker-compose up --build
+   ```
 
-Database: paymentdb
+   This will build and run:
+   - 3 Spring Boot microservices
+   - 2 PostgreSQL databases
+   - Zookeeper + Kafka
 
-Responsibilities:
+3. Verify the services are healthy:
+   ```bash
+   docker ps
+   ```
+   All containers should show `healthy` or `Up`.
 
-Consume BookingCreated events
+---
 
-Simulate payment processing (random success/failure)
+## API Documentation
 
-Persist payment attempt
-
-Publish PaymentProcessed event
-
-3. Notification Service
-Port: 8082
-
-Database: none (optional logging)
-
-Responsibilities:
-
-Consume both BookingCreated and PaymentProcessed events
-
-Simulate sending email/SMS (logged to console)
-
-Getting Started
-Prerequisites
-Docker & Docker Compose (install)
-
-Git (optional)
-
-Run the System
-Clone the repository:
-
-bash
-git clone https://github.com/rahulbentech/hotel-booking-event-system.git
-cd hotel-booking-event-system
-Start all services:
-
-bash
-docker-compose up --build
-This will build and run:
-
-3 Spring Boot microservices
-
-2 PostgreSQL databases
-
-Zookeeper + Kafka
-
-Verify the services are healthy:
-
-bash
-docker ps
-All containers should show healthy or Up.
-
-API Documentation
-Create a Booking
-http
+### Create a Booking
+```http
 POST /api/bookings
 Content-Type: application/json
 
@@ -135,9 +125,10 @@ Content-Type: application/json
   "checkOut": "2025-06-05",
   "amount": 450.00
 }
-Response (201 Created)
+```
 
-json
+**Response (201 Created)**
+```json
 {
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "hotelId": "h123",
@@ -149,12 +140,15 @@ json
   "createdAt": "2025-05-20T10:15:30Z",
   "updatedAt": "2025-05-20T10:15:30Z"
 }
-Get Booking by ID
-http
-GET /api/bookings/{id}
-Response (200 OK)
+```
 
-json
+### Get Booking by ID
+```http
+GET /api/bookings/{id}
+```
+
+**Response (200 OK)**
+```json
 {
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "hotelId": "h123",
@@ -166,92 +160,99 @@ json
   "createdAt": "2025-05-20T10:15:30Z",
   "updatedAt": "2025-05-20T10:15:35Z"
 }
-Health Checks
+```
+
+### Health Checks
 Each service exposes Spring Boot Actuator endpoints:
+- `GET /actuator/health` – liveness and readiness
+- `GET /actuator/info` – build information
+- `GET /actuator/metrics` – runtime metrics (Prometheus format)
 
-GET /actuator/health – liveness and readiness
+---
 
-GET /actuator/info – build information
+## Performance
 
-GET /actuator/metrics – runtime metrics (Prometheus format)
-
-Performance
-Throughput: 10,000+ events/sec (tested with k6)
-
-Latency (P99): < 200 ms end‑to‑end
-
-Uptime: 99.9% (designed for horizontal scaling)
+- **Throughput:** 10,000+ events/sec (tested with k6)
+- **Latency (P99):** < 200 ms end‑to‑end
+- **Uptime:** 99.9% (designed for horizontal scaling)
 
 Achieved through:
+- Reactive, non‑blocking stack (WebFlux + R2DBC + Reactor Kafka)
+- Kafka partitioning and parallel consumer groups
+- Idempotent event processing
+- Database connection pooling and indexing
 
-Reactive, non‑blocking stack (WebFlux + R2DBC + Reactor Kafka)
+---
 
-Kafka partitioning and parallel consumer groups
+## Monitoring & Observability
 
-Idempotent event processing
+- Health checks configured for Docker and Kubernetes readiness.
+- Prometheus metrics exposed at `/actuator/prometheus`.
+- Kafka consumer lag can be monitored via `kafka-consumer-groups` CLI or tools like Kafdrop.
 
-Database connection pooling and indexing
+**Screenshot of Kafka Consumer Groups**  
+![Consumer Groups](docs/kafka-consumer-groups.png) <!-- replace with actual screenshot -->
 
-Monitoring & Observability
-Health checks configured for Docker and Kubernetes readiness.
+---
 
-Prometheus metrics exposed at /actuator/prometheus.
+## Docker Compose
 
-Kafka consumer lag can be monitored via kafka-consumer-groups CLI or tools like Kafdrop.
+The `docker-compose.yml` orchestrates:
 
-Screenshot of Kafka Consumer Groups
-https://docs/kafka-consumer-groups.png <!-- placeholder – replace with actual screenshot -->
-
-Docker Compose
-The docker-compose.yml orchestrates:
-
-Zookeeper (port 2181)
-
-Kafka (port 9092)
-
-PostgreSQL for booking (port 5432)
-
-PostgreSQL for payment (port 5433)
-
-Three microservices (ports 8080, 8081, 8082)
+- Zookeeper (port 2181)
+- Kafka (port 9092)
+- PostgreSQL for booking (port 5432)
+- PostgreSQL for payment (port 5433)
+- Three microservices (ports 8080, 8081, 8082)
 
 All services use health checks to ensure correct startup order.
 
-Development
-Build Individual Service
-bash
+---
+
+## Development
+
+### Build Individual Service
+```bash
 cd booking-service
 ./gradlew bootJar   # or ./mvnw package
-Run Tests
-bash
+```
+
+### Run Tests
+```bash
 ./gradlew test
-Add New Dependencies
-Edit the build.gradle in the respective service directory.
+```
 
-Production Readiness Checklist
-Externalised configuration (environment variables)
+### Add New Dependencies
+Edit the `build.gradle` in the respective service directory.
 
-Health probes for Kubernetes
+---
 
-Idempotent event consumers
+## Production Readiness Checklist
 
-Structured logging (JSON format ready)
+- [x] Externalised configuration (environment variables)
+- [x] Health probes for Kubernetes
+- [x] Idempotent event consumers
+- [x] Structured logging (JSON format ready)
+- [ ] Authentication/authorisation (JWT/OAuth2) – optional
+- [ ] Distributed tracing (Micrometer Tracing + Zipkin) – optional
+- [ ] Dead letter topics for failed events – optional
 
-Authentication/authorisation (JWT/OAuth2) – optional
+---
 
-Distributed tracing (Micrometer Tracing + Zipkin) – optional
+## Contributing
 
-Dead letter topics for failed events – optional
-
-Contributing
 Contributions are welcome! Please open an issue or submit a pull request.
 
-License
-MIT
+---
 
-Acknowledgements
-Spring Boot, Apache Kafka, and the reactive ecosystem.
+## License
 
-Confluent for Kafka Docker images.
+[MIT](LICENSE)
 
-Testcontainers for integration testing.
+---
+
+## Acknowledgements
+
+- Spring Boot, Apache Kafka, and the reactive ecosystem.
+- Confluent for Kafka Docker images.
+- Testcontainers for integration testing.
