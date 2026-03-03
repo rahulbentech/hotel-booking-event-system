@@ -6,10 +6,9 @@ import com.ben.booking.entity.BookingStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 public record BookingResponse(
-        UUID id,
+        String id,
         String hotelId,
         String userId,
         LocalDate checkIn,

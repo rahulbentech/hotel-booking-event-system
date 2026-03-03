@@ -1,10 +1,8 @@
 spring:
   application:
     name: booking-service
-  r2dbc:
-    url: ${DB_URL:r2dbc:postgresql://localhost:5432/bookingdb}
-    username: ${DB_USER:booking_user}
-    password: ${DB_PASSWORD:booking_pass}
+  mongodb:
+    uri: ${SPRING_DATA_MONGODB_URI}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
@@ -23,3 +21,7 @@ management:
 logging:
   level:
     com.ben.booking: DEBUG
+    org.springframework.r2dbc: DEBUG
+    io.r2dbc.postgresql.QUERY: DEBUG
+    io.r2dbc.postgresql.PARAM: DEBUG
+    org.springframework.transaction: DEBUG
