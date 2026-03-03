@@ -22,9 +22,8 @@ dependencies {
     // Spring Boot WebFlux (reactive web)
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
-    // Reactive database access with R2DBC
-    implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
-    implementation 'org.postgresql:r2dbc-postgresql:1.0.2.RELEASE'
+    // Reactive database access with MongoDB
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
 
     // Reactive Kafka integration
     implementation 'io.projectreactor.kafka:reactor-kafka:1.3.24'

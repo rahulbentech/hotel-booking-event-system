@@ -63,10 +63,10 @@ public class PaymentProcessor {
     }
 
     private Mono<Void> processPayment(BookingCreatedEvent event, ReceiverRecord<String, String> record) {
-        // Simulate payment processing (random success/failure, delay)
+        // Simulate payment processing (always success, delay)
         return Mono.fromCallable(() -> {
                     Thread.sleep((long) (Math.random() * 100)); // simulate work
-                    return Math.random() > 0.2 ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;
+                    return PaymentStatus.SUCCESS;
                 })
                 .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
                 .flatMap(status -> {

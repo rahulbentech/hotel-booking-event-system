@@ -29,7 +29,7 @@ public class BookingService {
 
     public Mono<BookingResponse> createBooking(BookingRequest request) {
         Booking booking = Booking.builder()
-                .id(UUID.randomUUID())
+                .id(UUID.randomUUID().toString())
                 .hotelId(request.hotelId())
                 .userId(request.userId())
                 .checkIn(request.checkIn())
@@ -40,37 +40,40 @@ public class BookingService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
+        // Save inside a transaction and only after successful save, publish to Kafka.
+        // Then return the response.
         return bookingRepository.save(booking)
-                .flatMap(savedBooking -> publishBookingCreated(savedBooking)
-                        .thenReturn(BookingResponse.fromEntity(savedBooking)))
+                .flatMap(savedBooking ->
+                        publishBookingCreated(savedBooking)
+                                .thenReturn(BookingResponse.fromEntity(savedBooking))
+                )
                 .doOnSuccess(response -> log.info("Booking created and event published: {}", response.id()));
     }
 
     private Mono<Void> publishBookingCreated(Booking booking) {
-        return Mono.fromRunnable(() -> {
-            try {
-                String value = objectMapper.writeValueAsString(Map.of(
-                        "bookingId", booking.getId().toString(),
-                        "hotelId", booking.getHotelId(),
-                        "userId", booking.getUserId(),
-                        "amount", booking.getAmount()
-                ));
-                // Send to Kafka
-                kafkaSender.send(Mono.just(SenderRecord.create("booking-events", null, null,
-                                booking.getId().toString(), value, null)))
-                        .doOnError(e -> log.error("Failed to send booking event", e))
-                        .subscribe(); // fire and forget? Better to handle properly.
-                // In production, we'd want to ensure the send completes or fails atomically with DB.
-                // For simplicity, we assume success.
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException("Failed to serialize booking", e);
-            }
-        }).then();
+        return Mono.fromCallable(() -> {
+                    try {
+                        return objectMapper.writeValueAsString(Map.of(
+                                "bookingId", booking.getId().toString(),
+                                "hotelId", booking.getHotelId(),
+                                "userId", booking.getUserId(),
+                                "amount", booking.getAmount()
+                        ));
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException("Failed to serialize booking", e);
+                    }
+                })
+                .flatMap(value ->
+                        kafkaSender.send(Mono.just(SenderRecord.create("booking-events", null, null,
+                                        booking.getId().toString(), value, null)))
+                                .next()  // take the first (and only) result
+                                .then()
+                )
+                .doOnError(e -> log.error("Failed to send booking event", e));
     }
 
-    public Mono<BookingResponse> getBooking(UUID id) {
+    public Mono<BookingResponse> getBooking(String id) {
         return bookingRepository.findById(id)
-                .map(BookingResponse::fromEntity)
-                .switchIfEmpty(Mono.error(new RuntimeException("Booking not found")));
+                .map(BookingResponse::fromEntity);
     }
 }

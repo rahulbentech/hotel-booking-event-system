@@ -34,20 +34,17 @@ services:
       timeout: 5s
       retries: 5
 
-  postgres-booking:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: bookingdb
-      POSTGRES_USER: booking_user
-      POSTGRES_PASSWORD: booking_pass
+  mongodb-booking:
+    image: mongo:7.0
     ports:
-      - "5432:5432"
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: bookingdb
     volumes:
-      - ./booking-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
-      - booking-data:/var/lib/postgresql/data
+      - mongodb-booking-data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U booking_user -d bookingdb"]
-      interval: 5s
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
       timeout: 5s
       retries: 5
 
@@ -75,12 +72,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DB_URL: r2dbc:postgresql://postgres-booking:5432/bookingdb
-      DB_USER: booking_user
-      DB_PASSWORD: booking_pass
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb-booking:27017/bookingdb
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
-      postgres-booking:
+      mongodb-booking:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -130,5 +125,5 @@ services:
       retries: 5
 
 volumes:
-  booking-data:
+  mongodb-booking-data:
   payment-data:
